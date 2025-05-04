@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: crud-dashboard-deployment
+  labels:
+    app: crud-dashboard
+spec:
+  replicas: 1  # Adjust as needed
+  selector:
+    matchLabels:
+      app: crud-dashboard
+  template:
+    metadata:
+      labels:
+        app: crud-dashboard
+    spec:
+      containers:
+      - name: crud-dashboard
+        image: moonsol124/crud-dashboard:latest
+        ports:
+        - containerPort: 5173  # Vite's default port
+        imagePullPolicy: Always # Add this line.
+      - name: properties-service  # Second container
+        image: moonsol124/properties-service:latest
+        ports:
+        - containerPort: 3001  # Assuming properties-service listens on port 3001, adjust if needed
+        imagePullPolicy:  Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: crud-dashboard-service
+spec:
+  selector:
+    app: crud-dashboard
+  ports:
+  - protocol: TCP
+    port: 80  # Service port
+    targetPort: 5173 # Container Port
+  type: NodePort  # Or LoadBalancer if supported

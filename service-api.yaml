@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: properties-service-service
+spec:
+  selector:
+    app: crud-dashboard  # Matches the label on the Pod
+  ports:
+  - protocol: TCP
+    port: 3001       # Port on the Service itself (can be different if you want, but often the same for simplicity)
+    targetPort: 3001  # Port on the container (properties-service)
+  type: NodePort        # Or LoadBalancer if supported
