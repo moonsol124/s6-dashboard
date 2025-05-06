@@ -27,8 +27,8 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           # Set context to the frontend directory
-          context: ./crud-dashboard # Adjust path if needed
-          file: ./crud-dashboard/Dockerfile # Path to Dockerfile relative to repo root
+          context: . # Adjust path if needed
+          file: ./Dockerfile # Path to Dockerfile relative to repo root
           push: true
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/crud-dashboard-frontend:latest
