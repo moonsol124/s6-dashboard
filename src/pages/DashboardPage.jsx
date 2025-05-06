@@ -15,7 +15,7 @@ function DashboardPage() {
   const [itemsPerPage, setItemsPerPage] = useState(10); // Default items per page
 
   // --- Fetch ALL properties ---
-  const fetchProperties = async () => {
+  const fetchProperties = async () => {                  
     setLoading(true);
     setError(null);  
     try {
