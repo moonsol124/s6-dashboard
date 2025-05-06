@@ -17,12 +17,12 @@ function DashboardPage() {
   // --- Fetch ALL properties ---
   const fetchProperties = async () => {
     setLoading(true);
-    setError(null);
+    setError(null);  
     try {
       const data = await getAllProperties();
       setProperties(data || []); // Ensure properties is always an array
     } catch (err) {
-      setError('Failed to load properties. Please try again later.');
+      setError('Failed to load properties.. Please try again later.');
       setProperties([]); // Clear properties on error
       console.error(err);
     } finally {
