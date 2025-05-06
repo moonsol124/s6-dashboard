@@ -7,7 +7,6 @@ build # Ignore create-react-app build output if applicable
 .git
 .gitignore
 Dockerfile
-nginx.conf
 .dockerignore
 .DS_Store
 Thumbs.db
