@@ -1,18 +1,45 @@
-# Stage 1: Development Environment
-FROM node:18-alpine AS dev
+# crud-dashboard/Dockerfile (Multi-stage Build for Production)
 
+# ---- Build Stage ----
+# Use a specific Node version, Alpine for smaller size
+FROM node:18-alpine AS builder
+
+# Set working directory
 WORKDIR /app
 
-COPY package.json package-lock.json ./
+# Copy package files and install dependencies
+COPY package*.json ./
+RUN npm ci # Use ci for clean, consistent installs based on lock file
 
-RUN npm install
-
+# Copy the rest of the application source code
 COPY . .
 
-EXPOSE 5173
+# Build the static assets for production
+# Vite reads VITE_ variables from .env files by default during build
+# Ensure your .env or .env.production has the correct VITE_API_GATEWAY_URL etc.
+# pointing to your *external* Ingress/Gateway address (e.g., http://my-app.local)
+# Alternatively, pass build args if configured in GitHub Actions
+RUN echo ">>> Building static assets..." && \
+    npm run build && \
+    echo ">>> Build complete. Files in /app/dist:" && \
+    ls -l /app/dist
 
-# Set API URL environment variable (optional)
-ARG REACT_APP_API_URL=http://localhost:3002/api
-ENV VITE_API_URL=$REACT_APP_API_URL
+# ---- Production Stage ----
+# Use a lightweight Nginx image
+FROM nginx:1.25-alpine
 
-CMD ["npm", "run", "dev"]
+# Remove default Nginx welcome page
+RUN rm /etc/nginx/conf.d/default.conf
+
+# Copy custom Nginx configuration for SPAs
+# Assumes nginx.conf is in the same directory as the Dockerfile
+COPY nginx.conf /etc/nginx/conf.d/custom-app.conf
+
+# Copy built static assets from the 'builder' stage
+COPY --from=builder /app/dist /usr/share/nginx/html
+
+# Expose Nginx default port
+EXPOSE 80
+
+# Start Nginx in the foreground
+CMD ["nginx", "-g", "daemon off;"]

@@ -1,6 +1,7 @@
 # crud-dashboard/.dockerignore
 node_modules
-dist
+dist # Ignore local build output
+build # Ignore create-react-app build output if applicable
 .env*
 .env.*.local
 .git

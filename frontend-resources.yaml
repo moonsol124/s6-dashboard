@@ -1,0 +1,56 @@
+# frontend-resources.yaml
+
+# --- Namespace (Assumes 'app-services' already exists) ---
+
+# --- Deployment for the Frontend ---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend-deployment
+  namespace: app-services
+  labels:
+    app: frontend # Label for the Deployment
+spec:
+  replicas: 1 # Adjust as needed
+  selector:
+    matchLabels:
+      app: frontend # Selector matches pods with this label
+  template:
+    metadata:
+      labels:
+        app: frontend # Label applied to Pods
+    spec:
+      containers:
+      - name: frontend-container
+        image: moonsol124/crud-dashboard-frontend:latest # Image from Docker Hub
+        imagePullPolicy: Always # Pull fresh image on pod creation
+        ports:
+        - containerPort: 80 # Nginx default port
+        # --- Runtime Environment Variables (Optional - Read Note Below) ---
+        # If your frontend NEEDS runtime config (e.g., API URL that might change),
+        # you would mount a ConfigMap containing a config file (like config.js)
+        # or use more advanced Nginx variable injection techniques.
+        # For now, assuming build-time VITE_ variables are sufficient.
+        # env:
+        # - name: API_URL
+        #   valueFrom:
+        #     configMapKeyRef:
+        #       name: frontend-config
+        #       key: API_URL
+---
+# --- Service for Frontend (Internal Access First) ---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-svc # Stable DNS name for internal access
+  namespace: app-services
+  labels: # Add labels to the service itself for potential selection later
+    app: frontend
+spec:
+  selector:
+    app: frontend # Selects pods labeled 'app: frontend'
+  ports:
+  - protocol: TCP
+    port: 80       # Service listens on port 80 within the cluster
+    targetPort: 80 # Forwards traffic to container port 80 (Nginx)
+  type: NodePort   # Exposes the service on a static port on the node's IP
