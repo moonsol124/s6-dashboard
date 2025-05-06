@@ -1,9 +1,12 @@
 // src/components/Sidebar.jsx
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { FaHome, FaTachometerAlt, FaCog, FaQuestionCircle } from 'react-icons/fa';
+// Import only the necessary icons
+import { FaHome, FaUsers, FaSignOutAlt } from 'react-icons/fa';
+import { logoutUser } from '../services/api'; // Import the logout function
 
 function Sidebar() {
+  // Style function for active/inactive links - remains the same
   const linkClasses = ({ isActive }) =>
     `flex items-center px-4 py-2.5 rounded-brand text-sm font-medium transition-colors duration-150 ease-in-out ${
       isActive
@@ -11,44 +14,51 @@ function Sidebar() {
         : 'text-textSecondary hover:bg-primary/10 hover:text-primary'
     }`;
 
+  // Logout handler function - remains the same
+  const handleLogout = async (e) => {
+    e.preventDefault();
+    if (window.confirm('Are you sure you want to log out?')) {
+      await logoutUser();
+      // Redirect logic is handled by gateway/API interceptor
+    }
+  };
+
   return (
-    // Added flex-shrink-0 to prevent sidebar from shrinking below w-64
+    // Main sidebar structure - remains the same
     <aside className="w-64 flex-shrink-0 bg-background p-4 shadow-lg flex flex-col border-r border-grayLight">
-      {/* Logo/Brand Area */}
+      {/* Logo - remains the same */}
       <div className="mb-8 text-center pt-2">
         <NavLink to="/" className="text-2xl font-secondary font-bold text-primary hover:opacity-80 transition-opacity">
           MiCasaEsTuCasa
         </NavLink>
       </div>
 
-      {/* Navigation */}
+      {/* --- UPDATED Navigation --- */}
       <nav className="flex-grow space-y-2">
-        <NavLink to="/" end className={linkClasses}>
-          <FaTachometerAlt className="mr-3 h-5 w-5" />
-          Dashboard
-        </NavLink>
-        <NavLink to="/properties-placeholder" className={linkClasses}>
+        {/* Properties Link (assuming '/' is the main properties/dashboard page) */}
+        <NavLink to="/" end className={linkClasses}> {/* 'end' ensures it's only active for exact '/' */}
           <FaHome className="mr-3 h-5 w-5" />
-          Manage Properties
+          Properties
         </NavLink>
-        {/* ... other links */}
+
+        {/* Users Link */}
+        <NavLink to="/users" className={linkClasses}>
+          <FaUsers className="mr-3 h-5 w-5" />
+          Users
+        </NavLink>
       </nav>
 
-      {/* Placeholder Content & Bottom Links */}
-      <div className="mt-auto pt-4 border-t border-grayLight">
-         <h3 className="px-4 mb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider font-secondary">
-            Resources
-         </h3>
-         <div className='space-y-2'>
-            <NavLink to="/settings-placeholder" className={linkClasses}>
-                <FaCog className="mr-3 h-5 w-5" />
-                Settings
-            </NavLink>
-             <NavLink to="/help-placeholder" className={linkClasses}>
-                <FaQuestionCircle className="mr-3 h-5 w-5" />
-                Help & Support
-            </NavLink>
-        </div>
+      {/* --- UPDATED Bottom Area --- */}
+      {/* Removed Placeholder Resource Links */}
+      <div className="mt-auto pt-4 border-t border-grayLight space-y-2">
+         {/* Logout Button - remains the same */}
+         <button
+            onClick={handleLogout}
+            className="w-full flex items-center px-4 py-2.5 rounded-brand text-sm font-medium transition-colors duration-150 ease-in-out text-textSecondary hover:bg-red-100/50 hover:text-red-600"
+          >
+            <FaSignOutAlt className="mr-3 h-5 w-5" />
+            Logout
+         </button>
       </div>
     </aside>
   );

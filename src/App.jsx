@@ -1,10 +1,11 @@
 // src/App.jsx
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-
 // Import Layout Component
 import Layout from './components/Layout';
-
+import LoginPage from './pages/LoginPage'; // Import Login Page
+import UsersPage from './pages/UsersPage'; // Import Users Page
+import ProtectedRoute from './pages/ProtectedRoute'; // Import ProtectedRoute
 // Import Page Components
 import DashboardPage from './pages/DashboardPage';
 import AddPropertyPage from './pages/AddPropertyPage';
@@ -13,30 +14,37 @@ import NotFoundPage from './pages/NotFoundPage';
 
 function App() {
   return (
-    <Router>
-      <Routes>
-        {/* Wrap all main pages within the Layout component */}
-        <Route path="/" element={<Layout />}>
-          {/* Child routes rendered inside Layout's <Outlet /> */}
-          {/* `index` makes DashboardPage the default for "/" */}
-          <Route index element={<DashboardPage />} />
-          <Route path="add" element={<AddPropertyPage />} />
-          <Route path="edit/:id" element={<EditPropertyPage />} />
+    // Assuming <Router> is wrapping this component in main.jsx
+    <Routes>
+      {/* --- Public Routes --- */}
+      <Route path="/login" element={<LoginPage />} />
 
-          {/* Example placeholder routes for sidebar links */}
-          <Route path="properties-placeholder" element={<DashboardPage />} /> {/* Pointing back to dashboard for now */}
-          <Route path="settings-placeholder" element={<div className='p-4'>Settings Page Placeholder</div>} />
-          <Route path="help-placeholder" element={<div className='p-4'>Help Page Placeholder</div>} />
+      {/* --- Protected Routes --- */}
+      {/* This parent route uses ProtectedRoute. If authenticated, ProtectedRoute
+          will render <Layout><Outlet/></Layout>. The <Outlet/> will then render
+          the matched child route below (DashboardPage, UsersPage, etc.) */}
+      <Route element={<ProtectedRoute />}>
+        {/* Child routes are rendered inside the Layout's Outlet */}
+        <Route path="/" element={<DashboardPage />} index /> {/* Default route for authenticated users */}
+        <Route path="/add" element={<AddPropertyPage />} />
+        <Route path="/edit/:id" element={<EditPropertyPage />} />
+        <Route path="/users" element={<UsersPage />} />
 
-          {/* Catch-all 404 route *within* the layout */}
-          {/* You might want a separate 404 route *outside* the layout */}
-          {/* <Route path="*" element={<NotFoundPage />} /> */}
-        </Route>
+        {/* --- Add other protected routes AND placeholder routes here --- */}
+        {/* These will also render inside the main Layout */}
+        <Route path="properties-placeholder" element={<DashboardPage />} /> {/* Example placeholder */}
+        <Route path="settings-placeholder" element={<div className='p-4'>Settings Page Placeholder</div>} />
+        <Route path="help-placeholder" element={<div className='p-4'>Help Page Placeholder</div>} />
+        {/* --- End of other protected routes --- */}
 
-        {/* Optional: Separate route for 404 page *outside* the main layout */}
-        <Route path="*" element={<NotFoundPage />} />
-      </Routes>
-    </Router>
+      </Route> {/* End of the protected route group */}
+
+
+      {/* --- Catch-all 404 Route --- */}
+      {/* This will render if no other route matches, outside the main Layout */}
+      <Route path="*" element={<NotFoundPage />} />
+
+    </Routes>
   );
 }
 
