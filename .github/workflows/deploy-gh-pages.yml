@@ -1,0 +1,66 @@
+# .github/workflows/deploy-gh-pages.yml
+name: Deploy Frontend to GitHub Pages
+
+# Run workflow on pushes to the main branch that change frontend files
+on:
+  push:
+    branches: [ main ]
+    paths: # Optional but recommended: only run if frontend code changes
+      - 'src/**'
+      - 'public/**'
+      - 'index.html'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'vite.config.js'
+      - 'tailwind.config.js' # Add other relevant config files
+      - 'postcss.config.js'
+      - '.github/workflows/deploy-gh-pages.yml' # Trigger if workflow changes
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# Allow this job to clone the repo and create a page deployment
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build-and-deploy:
+    name: Build and Deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18 # Use the same Node version as your Dockerfile/dev env
+          cache: 'npm' # Cache npm dependencies
+
+      - name: Install Dependencies
+        run: npm ci # Use ci for clean installs
+
+      - name: Build Static Assets
+        # This uses the 'base' path configured in vite.config.js
+        run: npm run build
+        env:
+          # If your build needs VITE_ variables from secrets/vars
+          # VITE_API_GATEWAY_URL: ${{ secrets.VITE_PROD_API_URL }} # Example
+          NODE_ENV: production
+
+      - name: Setup GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload GitHub Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          # Path to the directory containing build output (default 'dist' for Vite)
+          path: './dist'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+        # This action uses the artifact uploaded in the previous step
+        # and deploys to the gh-pages environment automatically

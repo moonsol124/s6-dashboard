@@ -9,48 +9,44 @@ metadata:
   name: frontend-deployment
   namespace: app-services
   labels:
-    app: frontend # Label for the Deployment
+    app: frontend
 spec:
-  replicas: 1 # Adjust as needed
+  replicas: 1
   selector:
     matchLabels:
-      app: frontend # Selector matches pods with this label
+      app: frontend
   template:
     metadata:
       labels:
-        app: frontend # Label applied to Pods
+        app: frontend
     spec:
       containers:
       - name: frontend-container
-        image: moonsol124/crud-dashboard-frontend:latest # Image from Docker Hub
-        imagePullPolicy: Always # Pull fresh image on pod creation
+        # This image now contains Nginx + static build
+        image: moonsol124/crud-dashboard-frontend:latest
+        imagePullPolicy: Always
         ports:
-        - containerPort: 80 # Nginx default port
-        # --- Runtime Environment Variables (Optional - Read Note Below) ---
-        # If your frontend NEEDS runtime config (e.g., API URL that might change),
-        # you would mount a ConfigMap containing a config file (like config.js)
-        # or use more advanced Nginx variable injection techniques.
-        # For now, assuming build-time VITE_ variables are sufficient.
-        # env:
-        # - name: API_URL
-        #   valueFrom:
-        #     configMapKeyRef:
-        #       name: frontend-config
-        #       key: API_URL
+        # Nginx listens on port 80
+        - containerPort: 80
+        # Runtime Env Vars usually not needed if VITE_ vars baked into build
 ---
-# --- Service for Frontend (Internal Access First) ---
+# --- Service for Frontend ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: frontend-svc # Stable DNS name for internal access
+  name: frontend-svc
   namespace: app-services
-  labels: # Add labels to the service itself for potential selection later
+  labels:
     app: frontend
 spec:
   selector:
-    app: frontend # Selects pods labeled 'app: frontend'
+    app: frontend
   ports:
   - protocol: TCP
-    port: 80       # Service listens on port 80 within the cluster
-    targetPort: 80 # Forwards traffic to container port 80 (Nginx)
-  type: NodePort   # Exposes the service on a static port on the node's IP
+    port: 80       # Service listens on port 80 internally
+    targetPort: 80 # Forwards traffic to Nginx container on port 80
+  # --- DECISION POINT ---
+  # Use ClusterIP if accessing ONLY via Ingress
+  # Use NodePort if you want to test DIRECTLY via Minikube IP + NodePort *before* setting up/testing Ingress
+  type: ClusterIP # <<< RECOMMENDED for use with Ingress
+  # type: NodePort   # Use this line INSTEAD if you want to test directly first via 'minikube service frontend-svc --url'
