@@ -9,7 +9,7 @@ function DashboardPage() {
   const [properties, setProperties] = useState([]); // Holds ALL fetched properties
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
+ 
   // --- Pagination State ---
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10); // Default items per page
