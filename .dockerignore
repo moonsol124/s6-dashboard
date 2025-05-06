@@ -1,0 +1,14 @@
+# crud-dashboard/.dockerignore
+node_modules
+dist
+.env*
+.env.*.local
+.git
+.gitignore
+Dockerfile
+nginx.conf
+.dockerignore
+.DS_Store
+Thumbs.db
+npm-debug.log*
+# Add any other build artifacts or local config files
