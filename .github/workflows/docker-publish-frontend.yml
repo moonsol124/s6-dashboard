@@ -4,9 +4,6 @@ name: Build and Push Docker Image (Frontend)
 on:
   push:
     branches: [ main ]
-    paths: # Optional: Trigger only if frontend files change
-      - 'crud-dashboard/**' # Adjust path if your frontend is elsewhere
-      - '.github/workflows/docker-publish-frontend.yml'
   workflow_dispatch:
 
 jobs:
