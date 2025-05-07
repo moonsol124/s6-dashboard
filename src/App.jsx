@@ -11,6 +11,7 @@ import DashboardPage from './pages/DashboardPage';
 import AddPropertyPage from './pages/AddPropertyPage';
 import EditPropertyPage from './pages/EditPropertyPage';
 import NotFoundPage from './pages/NotFoundPage';
+import AuthCallbackPage from './pages/AuthCallbackPage'; // <<< Import the new page
 
 function App() {
   return (
@@ -18,6 +19,7 @@ function App() {
     <Routes>
       {/* --- Public Routes --- */}
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/auth/callback" element={<AuthCallbackPage />} /> {/* <<< Add this route */}
 
       {/* --- Protected Routes --- */}
       {/* This parent route uses ProtectedRoute. If authenticated, ProtectedRoute

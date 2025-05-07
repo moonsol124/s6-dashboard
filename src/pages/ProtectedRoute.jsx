@@ -1,11 +1,15 @@
 // src/components/ProtectedRoute.jsx
-import React from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Layout from '../components/Layout'; // Import the main layout
+import React, { createContext, useState, useEffect, useContext, useCallback } from 'react';
 
 function ProtectedRoute() {
   const { isAuthenticated, isLoading } = useAuth();
+
+  useEffect(() => {
+    console.log ("protected mounted with ", isAuthenticated, isLoading)
+  }, [])
 
   if (isLoading) {
     // Show a loading indicator while checking auth status
