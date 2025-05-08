@@ -54,7 +54,7 @@ jobs:
           # *** IMPORTANT: Use the GitHub Pages Redirect URI here! ***
           # This MUST match the redirect URI registered on your OAuth server
           # for your GitHub Pages client ID, and it must match what your HashRouter expects.
-          VITE_OAUTH_REDIRECT_URI: https://moonsol124.github.io/s6-dashboard/#/auth/callback
+          VITE_OAUTH_REDIRECT_URI: http://34.31.33.116/auth/callback
 
 
       - name: Setup GitHub Pages
