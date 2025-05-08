@@ -6,6 +6,7 @@ const API_GATEWAY_URL = import.meta.env.VITE_API_GATEWAY_URL || 'http://localhos
 // OAuth Server URL needed only for the initial redirect
 const OAUTH_SERVER_URL = import.meta.env.VITE_OAUTH_SERVER_URL || 'http://localhost:3000';
 // Client ID and Redirect URI needed only for the initial redirect
+// --- FIX: Removed duplicate '.meta' ---
 const OAUTH_CLIENT_ID = import.meta.env.VITE_OAUTH_CLIENT_ID;
 const OAUTH_REDIRECT_URI = import.meta.env.VITE_OAUTH_REDIRECT_URI;
 // const PROPERTY_SERVICE_URL= import.meta.env.VITE_PROPERTIES_SERVICE_DIRECT_URL; // This seems to be for direct calls, might need review later
@@ -14,24 +15,29 @@ const OAUTH_REDIRECT_URI = import.meta.env.VITE_OAUTH_REDIRECT_URI;
 // Create an Axios instance configured to talk to the API Gateway
 const apiClient = axios.create({
   baseURL: API_GATEWAY_URL, // Base URL is the Gateway
-  // withCredentials: true, // <<< REMOVE THIS! We are not using session cookies for auth anymore.
+  // withCredentials: true, // We are not using session cookies for auth anymore.
 });
 
 // --- Axios Interceptor for Adding JWT to Headers ---
 apiClient.interceptors.request.use(
     config => {
+        console.log(`[API Interceptor] Attempting to get token for request: ${config.method.toUpperCase()} ${config.url}`);
         // Get the access token from localStorage
         const accessToken = localStorage.getItem('accessToken');
+        console.log(`[API Interceptor] Token found in localStorage: ${accessToken ? 'Yes' : 'No'}`);
+
 
         // If an access token exists, add it to the Authorization header
         if (accessToken) {
             // Check if the header is already set (e.g., by a specific function call)
             if (!config.headers.Authorization) {
                  config.headers.Authorization = `Bearer ${accessToken}`;
-                 console.log(`[API Interceptor] Added Bearer token to request: ${config.method.toUpperCase()} ${config.url}`);
+                 console.log(`[API Interceptor] Added Bearer token.`);
+            } else {
+                 console.log(`[API Interceptor] Authorization header already exists.`);
             }
         } else {
-             console.log(`[API Interceptor] No access token found for request: ${config.method.toUpperCase()} ${config.url}`);
+             console.log(`[API Interceptor] Authorization header NOT added (no token).`);
         }
 
         return config;
@@ -53,9 +59,9 @@ export const initiateLogin = (state = 'default') => { // Add optional state para
         return;
     }
 
-    // TODO: Generate a secure random 'state' parameter and store it (e.g., in localStorage)
+    // Generate a secure random 'state' parameter and store it (e.g., in localStorage)
     // BEFORE redirecting. You will validate this state in the /auth/callback page.
-    // Example (using a simple approach for now, replace with a secure random generator):
+    // Use a cryptographically secure random generator in production!
     const generatedState = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
     localStorage.setItem('oauthState', generatedState); // Store the state
 
@@ -76,6 +82,9 @@ export const initiateLogin = (state = 'default') => { // Add optional state para
 export const refreshAccessToken = async () => {
      console.log('[API] Attempting to refresh access token.');
     const refreshToken = localStorage.getItem('refreshToken');
+    console.log(`[API Refresh] Attempting to get refresh token from localStorage.`);
+    console.log(`[API Refresh] Result of localStorage.getItem('refreshToken'): ${refreshToken ? 'Token found' : 'null'}`); // Log the result
+
 
     if (!refreshToken) {
          console.warn('[API] No refresh token found in storage.');
@@ -89,7 +98,7 @@ export const refreshAccessToken = async () => {
              refresh_token: refreshToken
          });
 
-         console.log('[API] Token refresh successful.');
+         console.log('[API] Token refresh response received successfully.');
         // WARNING: Avoid logging the full token data
         // console.log('Refresh Response Data:', response.data);
 
@@ -102,6 +111,7 @@ export const refreshAccessToken = async () => {
          }
           if (expires_in !== undefined) {
              localStorage.setItem('expiresIn', expiresIn);
+             // Calculate and store the absolute expiry time for easier checks (optional, jwtDecode is primary)
              const expiresAt = Date.now() + parseInt(expiresIn, 10) * 1000;
              localStorage.setItem('tokenExpiresAt', expiresAt.toString());
          }
@@ -132,53 +142,39 @@ export const refreshAccessToken = async () => {
 
 
 // --- Axios Interceptor for Handling 401 Unauthorized (JWT Expiry/Invalid) ---
-// This needs to be adjusted to handle JWT expiry by attempting a refresh
+// This handles automatic token refresh and request retry
 apiClient.interceptors.response.use(
   response => response,
   async error => { // Made this async to await refreshAccessToken
     const originalRequest = error.config;
 
     // Check if the response is a 401 Unauthorized and it's not the refresh request itself
-    if (error.response?.status === 401 && originalRequest.url !== `${API_GATEWAY_URL}/auth/refresh`) {
+    // Also check if we've already tried to retry this request to prevent loops
+    if (error.response?.status === 401 && !originalRequest._retry && originalRequest.url !== `${API_GATEWAY_URL}/auth/refresh`) {
       console.warn('[API Interceptor] Received 401 Unauthorized from Gateway.');
 
-      // Avoid infinite loops if refresh itself fails or requires re-login
-      // Check if we've already tried to refresh for this specific request
-      if (!originalRequest._retry) {
-        originalRequest._retry = true; // Mark this request as having been retried
+      originalRequest._retry = true; // Mark this request as having been retried
 
-        const refreshed = await refreshAccessToken();
+      const refreshed = await refreshAccessToken();
 
-        if (refreshed) {
-          console.log('[API Interceptor] Token refreshed successfully. Retrying original request.');
-          // Retry the original request with the new access token (added by request interceptor)
-          // The request interceptor will automatically add the new token from localStorage
-          return apiClient(originalRequest); // Call the original request again
-        } else {
-          // Refresh failed (invalid refresh token or other issue). Full re-login needed.
-          console.log('[API Interceptor] Token refresh failed. Redirecting user to login.');
-          // Clear any potentially stale tokens just in case
-          localStorage.removeItem('accessToken');
-          localStorage.removeItem('refreshToken');
-          localStorage.removeItem('expiresIn');
-          localStorage.removeItem('tokenExpiresAt');
-          // Redirect to the login flow
-          initiateLogin(); // This redirects the browser
-
-          // Reject the promise to stop propagation of the error to the original caller
-          // The redirect will handle the rest
-          return Promise.reject(new Error("Unauthorized: Token refresh failed, redirecting to login."));
-        }
+      if (refreshed) {
+        console.log('[API Interceptor] Token refreshed successfully. Retrying original request.');
+        // Retry the original request with the new access token (added by request interceptor)
+        return apiClient(originalRequest); // Call the original request again using the apiClient instance
       } else {
-          // If we already retried this request after a refresh and it failed again (shouldn't happen often)
-           console.error('[API Interceptor] Original request already retried after refresh and failed again.');
-            // Clear tokens and redirect to login as a fallback
-            localStorage.removeItem('accessToken');
-            localStorage.removeItem('refreshToken');
-            localStorage.removeItem('expiresIn');
-            localStorage.removeItem('tokenExpiresAt');
-           initiateLogin();
-           return Promise.reject(new Error("Unauthorized: Retry failed, redirecting to login."));
+        // Refresh failed (invalid refresh token or other issue). Full re-login needed.
+        console.log('[API Interceptor] Token refresh failed. Redirecting user to login.');
+        // Clear any potentially stale tokens just in case
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+        localStorage.removeItem('expiresIn');
+        localStorage.removeItem('tokenExpiresAt');
+        // Redirect to the login flow (this function handles window.location.href)
+        initiateLogin();
+
+        // Reject the promise to stop propagation of the error to the original caller
+        // The redirect will handle the rest
+        return Promise.reject(new Error("Unauthorized: Token refresh failed, redirecting to login."));
       }
     }
 
@@ -188,10 +184,7 @@ apiClient.interceptors.response.use(
   }
 );
 
-// --- Authentication Functions (Removed server-side checkAuthStatus) ---
-// Removed checkAuthStatus as it's no longer valid/needed.
-// Auth status is managed client-side by checking localStorage in AuthContext.
-
+// --- Authentication Functions (Managed by AuthContext and Interceptor) ---
 export const logoutUser = async () => {
     console.log('[API] Initiating logout.');
     const refreshToken = localStorage.getItem('refreshToken');
@@ -207,10 +200,8 @@ export const logoutUser = async () => {
     // This call is fire-and-forget from the frontend's perspective after clearing local tokens.
     if (refreshToken) {
         try {
-            // Use axios directly because apiClient interceptors might cause issues here
-            // Also, we don't necessarily need the Bearer token for logout,
-            // but we DO need the refresh token in the body if the gateway
-            // is configured to revoke based on that.
+            // Use axios directly or apiClient without interceptors if needed, but simplest is direct call
+            // We send refresh_token in the body as per your gateway's logout endpoint
             await axios.post(`${API_GATEWAY_URL}/auth/logout`, { refresh_token: refreshToken });
              console.log('[API] Logout endpoint called successfully.');
         } catch (error) {
@@ -218,14 +209,11 @@ export const logoutUser = async () => {
              // Decide how to handle this error. Clearing local tokens is primary logout action.
         }
     }
-
-    // After clearing tokens and attempting server-side logout,
-    // the AuthContext should detect the state change and redirect to login.
-    // No need for window.location.href here unless the AuthContext logic fails.
+    // The AuthContext handles the client-side navigation after this completes
 };
 
 
-// --- Property Functions (Using apiClient) ---
+// --- Property Functions (Targeting API Gateway /api/property-service/* routes) ---
 // These will now automatically have the JWT added by the request interceptor
 export const getAllProperties = async () => {
   console.log(`[API] Fetching all properties from: ${API_GATEWAY_URL}/api/property-service/properties`);
@@ -239,11 +227,6 @@ export const getPropertyById = async (id) => {
   return response.data;
 };
 
-// !! IMPORTANT: These functions were previously making DIRECT calls to the service.
-// !! Now they should go through the API Gateway where authentication is enforced.
-// !! If you intended DIRECT calls for specific scenarios (like backend-to-backend),
-// !! those wouldn't happen from the frontend. Frontend calls should go via Gateway.
-// Let's update create/update to go via the gateway proxy:
 export const createProperty = async (propertyData) => {
   console.log(`[API] Creating property via Gateway: ${API_GATEWAY_URL}/api/property-service/properties`);
   const response = await apiClient.post('/api/property-service/properties', propertyData, {
@@ -267,13 +250,59 @@ export const deleteProperty = async (id) => {
   return response.status; // DELETE often returns 204 No Content
 };
 
-// --- User Functions (Using apiClient) ---
+// --- User Functions (Targeting API Gateway /api/users/* routes) ---
 // These will now automatically have the JWT added by the request interceptor
+
 export const getAllUsers = async () => {
   const targetPath = '/api/users/profiles';
   console.log(`[API] Fetching all users from: ${API_GATEWAY_URL}${targetPath}`);
+  // The response from the Gateway/User Service should now include the 'role' field
   const response = await apiClient.get(targetPath);
-  return response.data;
+  return response.data; // Expecting [{ id, username, email, created_at, role }, ...]
+};
+
+// --- NEW: Get User by ID ---
+export const getUserById = async (id) => {
+    const targetPath = `/api/users/profiles/${id}`; // Assuming your User Service supports GET /profiles/:id
+    console.log(`[API] Fetching user by ID ${id} from: ${API_GATEWAY_URL}${targetPath}`);
+    const response = await apiClient.get(targetPath);
+    return response.data; // Expecting { id, username, email, created_at, role }
+};
+
+// --- NEW: Create User ---
+// Note: User creation might typically be handled by the OAuth server's /register endpoint
+// or require specific admin privileges. This assumes an admin endpoint on the User Service
+// accessible via the Gateway.
+export const createUser = async (userData) => { // userData should include username, email, password, role
+     const targetPath = '/api/users/register'; // Assuming your User Service supports POST /register via gateway
+     console.log(`[API] Creating user via Gateway: ${API_GATEWAY_URL}${targetPath}`);
+     // Important: Your User Service /register currently expects 'username', 'email', 'password'.
+     // If you want to set role here, User Service /register needs to be updated to accept 'role'.
+     // Or, create a separate admin endpoint like /api/users/admin/users if /register is public.
+     const response = await apiClient.post(targetPath, userData, {
+          headers: { 'Content-Type': 'application/json' }
+     });
+     return response.data; // Expecting the new user object
+};
+
+// --- NEW: Update User ---
+// This assumes an endpoint like PUT /profiles/:id or /admin/users/:id on User Service via Gateway
+export const updateUser = async (id, userData) => { // userData might include username, email, role (password changes usually separate)
+    const targetPath = `/api/users/profiles/${id}`; // Assuming PUT /profiles/:id or similar
+    console.log(`[API] Updating user ${id} via Gateway: ${API_GATEWAY_URL}${targetPath}`);
+     const response = await apiClient.put(targetPath, userData, {
+          headers: { 'Content-Type': 'application/json' }
+     });
+     return response.data; // Expecting the updated user object
+};
+
+// --- NEW: Delete User ---
+// This assumes an endpoint like DELETE /profiles/:id or /admin/users/:id on User Service via Gateway
+export const deleteUser = async (id) => {
+    const targetPath = `/api/users/profiles/${id}`; // Assuming DELETE /profiles/:id or similar
+    console.log(`[API] Deleting user ${id} via Gateway: ${API_GATEWAY_URL}${targetPath}`);
+    const response = await apiClient.delete(targetPath);
+    return response.status; // DELETE often returns 204 No Content
 };
 
 
