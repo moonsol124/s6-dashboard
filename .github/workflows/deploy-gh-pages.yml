@@ -51,9 +51,6 @@ jobs:
           VITE_API_GATEWAY_URL: http://34.31.33.116:80
           VITE_OAUTH_SERVER_URL: http://34.68.64.43:80
           VITE_OAUTH_CLIENT_ID: a41825cf-211a-4dd9-9bd7-cd3d95850fd0
-          # *** IMPORTANT: Use the GitHub Pages Redirect URI here! ***
-          # This MUST match the redirect URI registered on your OAuth server
-          # for your GitHub Pages client ID, and it must match what your HashRouter expects.
           VITE_OAUTH_REDIRECT_URI: http://34.31.33.116/auth/callback
 
 

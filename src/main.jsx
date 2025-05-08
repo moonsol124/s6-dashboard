@@ -10,17 +10,17 @@ import { AuthProvider } from './context/AuthContext.jsx'; // Import AuthProvider
 // Remove: import { BrowserRouter as Router } from 'react-router-dom';
 
 // Add or Uncomment:
-import { HashRouter } from 'react-router-dom'; // <<< Use HashRouter here directly
+import { BrowserRouter } from 'react-router-dom'; // <<< Use BrowserRouter here directly
 
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     {/* --- CHANGE THIS COMPONENT --- */}
-    {/* Replace <Router> with <HashRouter> */}
-    <HashRouter>
+    {/* Replace <HashRouter> with <BrowserRouter> */}
+    <BrowserRouter>
       <AuthProvider> {/* Wrap App with AuthProvider */}
         <App />
       </AuthProvider>
-    </HashRouter>
+    </BrowserRouter>
   </React.StrictMode>,
 );
